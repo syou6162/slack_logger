@@ -1,0 +1,26 @@
+#!/bin/bash
+
+index="slack"
+type="message"
+
+# curl -XDELETE http://localhost:9200/$index
+# curl -XPUT localhost:9200/$index
+# curl -XPUT localhost:9200/$index/$type/_mapping -d '
+# {
+#     "message": {
+#         "properties": {
+#             "date": { "type": "date", "format": "basic_date_time_no_millis" }
+#         }
+#     }
+# }
+# '
+
+curl "https://slack.com/api/channels.history?token=${TOKEN}&channel=${CHANNEL}" |
+  jq -c '.messages | reverse | .[]' |
+  ruby add_date_and_username.rb <(curl "https://slack.com/api/users.list?token=${TOKEN}" | jq -c -r '.members[] | {id, name}') |
+  while read line
+  do
+    id=$(echo $line | jq -c '.ts' | tr -d "\n")
+    echo -e "{ \"index\" : { \"_index\" : \"slack\", \"_type\" : \"message\", \"_id\" : ${id}} }\n$line" |
+      curl -XPOST localhost:9200/_bulk --data-binary @-
+  done
