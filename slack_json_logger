@@ -1,0 +1,22 @@
+#!/bin/bash
+
+function get_team_name {
+  token=$1
+  curl -s https://slack.com/api/team.info?token=${token} | jq -c -r '.team.domain' | tr -d "\n"
+}
+
+function get_messages_of_team {
+  token=$1
+  team=$(get_team_name $token)
+    curl -s "https://slack.com/api/channels.list?token=${token}" | \
+    jq -c ".channels | map(select(.is_member)) | .[]" |
+    while read line
+    do
+      id=$(echo $line | jq -r '.id' | tr -d "\n")
+      channel=$(echo $line | jq -r '.name' | tr -d "\n")
+      curl -s "https://slack.com/api/channels.history?token=${token}&channel=${id}" | jq -c '.messages | reverse | .[]' | ruby add_team_and_channel_info.rb $team $id $channel
+    done |
+    ruby add_date_and_username.rb <(curl -s "https://slack.com/api/users.list?token=${token}" | jq -c -r '.members[] | {id, name}')
+}
+
+get_messages_of_team $1
