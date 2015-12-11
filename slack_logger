@@ -15,10 +15,8 @@ type="message"
 # }
 # '
 
-curl "https://slack.com/api/channels.history?token=${SLACK_TOKEN}&channel=${SLACK_CHANNEL}" |
-  jq -c '.messages | reverse | .[]' |
-  ruby add_date_and_username.rb <(curl "https://slack.com/api/users.list?token=${SLACK_TOKEN}" | jq -c -r '.members[] | {id, name}') |
-  while read line
+./slack_json_logger $1 |
+ while read line
   do
     id=$(echo $line | jq -c '.ts' | tr -d "\n")
     echo -e "{ \"index\" : { \"_index\" : \"slack\", \"_type\" : \"message\", \"_id\" : ${id}} }\n$line" |
