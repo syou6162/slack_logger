@@ -1,0 +1,7 @@
+#!/bin/bash
+
+echo $* |
+  tr ' ' '\n' |
+  xargs -I% ./slack_json_logger % |
+  jq -r --slurp 'sort_by(.date) | reverse' | \
+  jq -r '.[] | .team + "/" + .channel + "<" + .username + ">: " + .text'
